@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Weather App</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.5), rgba(0,0,0,0.7)), url('https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #ffffff;
+      transition: background-color 0.3s ease;
+    }
+    .dark-mode {
+      background-color: #121212 !important;
+      background-image: none !important;
+      color: #ffffff;
+    }
+    .weather-container {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 30px;
+      border-radius: 16px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+      text-align: center;
+      max-width: 450px;
+      width: 100%;
+    }
+    h1 {
+      font-weight: 600;
+      font-size: 28px;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      padding: 10px 14px;
+      border: none;
+      border-radius: 8px;
+      width: 70%;
+      font-size: 16px;
+      margin-bottom: 15px;
+    }
+    #suggestions {
+      background: rgba(255, 255, 255, 0.9);
+      color: #000;
+      margin: 0 auto;
+      width: 70%;
+      text-align: left;
+      border-radius: 8px;
+      max-height: 120px;
+      overflow-y: auto;
+      display: none;
+      position: absolute;
+    }
+    #suggestions div {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    #suggestions div:hover {
+      background-color: #efefef;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #ffffff;
+      color: #333333;
+      border: none;
+      border-radius: 8px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-left: 10px;
+    }
+    .toggle-mode {
+      margin-top: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #ccc;
+    }
+    .weather-info {
+      margin-top: 25px;
+      font-size: 18px;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+    }
+    .weather-info.visible {
+      opacity: 1;
+    }
+    .icon {
+      font-size: 48px;
+      margin: 12px 0;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 10px;
+      margin: 10px 0;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #fff;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="weather-container">
+    <h1>🌤️ Modern Weather App</h1>
+    <div>
+      <input type="text" id="cityInput" placeholder="Enter city name" oninput="showSuggestions()">
+      <div id="suggestions"></div>
+      <button onclick="getWeather()">Get Weather</button>
+    </div>
+    <div id="loader" class="loader" style="display:none;"></div>
+    <div class="weather-info" id="weatherInfo"></div>
+    <div class="weather-info" id="forecastInfo"></div>
+    <div class="toggle-mode" onclick="toggleDarkMode()">🌙 Toggle Dark/Light Mode</div>
+  </div>
+
+  <script>
+    const suggestionsList = ["New York", "London", "Tokyo", "Paris", "Mumbai", "Delhi", "Sydney", "Beijing"];
+
+    function showSuggestions() {
+      const input = document.getElementById("cityInput").value.toLowerCase();
+      const suggestionsDiv = document.getElementById("suggestions");
+      suggestionsDiv.innerHTML = '';
+      if (input.length === 0) {
+        suggestionsDiv.style.display = 'none';
+        return;
+      }
+      const filtered = suggestionsList.filter(city => city.toLowerCase().startsWith(input));
+      filtered.forEach(city => {
+        const div = document.createElement("div");
+        div.textContent = city;
+        div.onclick = () => {
+          document.getElementById("cityInput").value = city;
+          suggestionsDiv.style.display = 'none';
+        };
+        suggestionsDiv.appendChild(div);
+      });
+      suggestionsDiv.style.display = filtered.length ? 'block' : 'none';
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle("dark-mode");
+    }
+
+    async function getWeather() {
+      const city = document.getElementById("cityInput").value;
+      const apiKey = "4e0e292ff892e51a29990f4fdc9df2ce";
+
+      const currentUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+      const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric`;
+
+      document.getElementById("loader").style.display = "block";
+      document.getElementById("weatherInfo").classList.remove("visible");
+      document.getElementById("forecastInfo").classList.remove("visible");
+
+      try {
+        const [currentRes, forecastRes] = await Promise.all([
+          fetch(currentUrl),
+          fetch(forecastUrl)
+        ]);
+
+        const currentData = await currentRes.json();
+        const forecastData = await forecastRes.json();
+
+        document.getElementById("loader").style.display = "none";
+
+        if (currentData.cod === 200 && forecastData.cod === "200") {
+          const weatherHTML = `
+            <div class="card">
+              <h2>${currentData.name}, ${currentData.sys.country}</h2>
+              <div class="icon">${getWeatherIcon(currentData.weather[0].main)}</div>
+              <p><strong>${currentData.weather[0].main}</strong> - ${currentData.weather[0].description}</p>
+              <p>🌡️ Temp: ${currentData.main.temp}&deg;C</p>
+              <p>💧 Humidity: ${currentData.main.humidity}%</p>
+              <p>🌬️ Wind: ${currentData.wind.speed} m/s</p>
+            </div>
+          `;
+
+          let forecastHTML = '<h3>5-Day Forecast</h3>';
+          for (let i = 0; i < forecastData.list.length; i += 8) {
+            const day = forecastData.list[i];
+            forecastHTML += `
+              <div class="card">
+                <h4>${new Date(day.dt_txt).toLocaleDateString()}</h4>
+                <div class="icon">${getWeatherIcon(day.weather[0].main)}</div>
+                <p>${day.weather[0].description}</p>
+                <p>🌡️ ${day.main.temp}&deg;C</p>
+              </div>
+            `;
+          }
+
+          const weatherInfo = document.getElementById("weatherInfo");
+          const forecastInfo = document.getElementById("forecastInfo");
+
+          weatherInfo.innerHTML = weatherHTML;
+          forecastInfo.innerHTML = forecastHTML;
+
+          weatherInfo.classList.add("visible");
+          forecastInfo.classList.add("visible");
+        } else {
+          document.getElementById("weatherInfo").innerHTML = `<p>City not found!</p>`;
+        }
+      } catch (error) {
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("weatherInfo").innerHTML = `<p>Error fetching data</p>`;
+      }
+    }
+
+    function getWeatherIcon(condition) {
+      switch(condition.toLowerCase()) {
+        case 'clouds': return '☁️';
+        case 'clear': return '☀️';
+        case 'rain': return '🌧️';
+        case 'snow': return '❄️';
+        case 'thunderstorm': return '🌩️';
+        case 'drizzle': return '🌦️';
+        case 'mist': return '🌫️';
+        default: return '🌤️';
+      }
+    }
+  </script>
+</body>
+</html>
